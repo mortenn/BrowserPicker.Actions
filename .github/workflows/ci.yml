@@ -106,9 +106,16 @@ jobs:
           path: pr-validation-summary
 
       - name: Fail when validation checks fail
-        if: ${{ always() && (steps.csharpier.outcome != 'success' || steps.xamlstyler.outcome != 'success' || steps.tests.outcome != 'success') }}
+        if: ${{ always() }}
         shell: bash
-        run: exit 1
+        env:
+          CSHARPIER_STATUS: ${{ steps.csharpier.outcome || 'success' }}
+          XAMLSTYLER_STATUS: ${{ steps.xamlstyler.outcome || 'success' }}
+          TESTS_STATUS: ${{ steps.tests.outcome || 'success' }}
+        run: |
+          if [ "${CSHARPIER_STATUS}" != "success" ] || [ "${XAMLSTYLER_STATUS}" != "success" ] || [ "${TESTS_STATUS}" != "success" ]; then
+            exit 1
+          fi
 
   prepare:
     if: ${{ inputs.publish_deliverables }}
