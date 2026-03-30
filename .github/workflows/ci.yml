@@ -88,9 +88,9 @@ jobs:
             echo
             echo "| Check | Result |"
             echo "| --- | --- |"
-            echo "| CSharpier | ${{ steps.csharpier.outcome }} |"
-            echo "| XamlStyler | ${{ steps.xamlstyler.outcome }} |"
-            echo "| dotnet test | ${{ steps.tests.outcome }} |"
+            echo "| CSharpier | ${{ steps.csharpier.conclusion }} |"
+            echo "| XamlStyler | ${{ steps.xamlstyler.conclusion }} |"
+            echo "| dotnet test | ${{ steps.tests.conclusion }} |"
             echo
           } > pr-validation-summary/summary.md
 
@@ -109,9 +109,9 @@ jobs:
         if: ${{ always() }}
         shell: bash
         env:
-          CSHARPIER_STATUS: ${{ steps.csharpier.outcome || 'success' }}
-          XAMLSTYLER_STATUS: ${{ steps.xamlstyler.outcome || 'success' }}
-          TESTS_STATUS: ${{ steps.tests.outcome || 'success' }}
+          CSHARPIER_STATUS: ${{ steps.csharpier.conclusion || 'success' }}
+          XAMLSTYLER_STATUS: ${{ steps.xamlstyler.conclusion || 'success' }}
+          TESTS_STATUS: ${{ steps.tests.conclusion || 'success' }}
         run: |
           if [ "${CSHARPIER_STATUS}" != "success" ] || [ "${XAMLSTYLER_STATUS}" != "success" ] || [ "${TESTS_STATUS}" != "success" ]; then
             exit 1
