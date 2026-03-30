@@ -32,16 +32,78 @@ jobs:
         run: dotnet tool restore
 
       - name: Check CSharpier formatting
+        id: csharpier
+        continue-on-error: true
         shell: bash
-        run: dotnet csharpier check .
+        run: dotnet csharpier check . 2>&1 | tee csharpier.log
 
       - name: Check XAML formatting
+        id: xamlstyler
+        continue-on-error: true
         shell: bash
-        run: dotnet xstyler -r -d src -p
+        run: dotnet xstyler -r -d src -p 2>&1 | tee xamlstyler.log
 
       - name: Run tests
+        id: tests
+        continue-on-error: true
         shell: bash
-        run: dotnet test BrowserPicker.sln -p:Version=1.0.0
+        run: dotnet test BrowserPicker.sln -p:Version=1.0.0 2>&1 | tee dotnet-test.log
+
+      - name: Build PR validation summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          mkdir -p pr-validation-summary
+
+          summarize_log() {
+            local label="$1"
+            local file="$2"
+
+            {
+              echo "### ${label}"
+              echo
+              echo "<details><summary>Output</summary>"
+              echo
+              echo '```text'
+              if [ -f "$file" ]; then
+                sed -n '1,120p' "$file"
+              else
+                echo "No output captured."
+              fi
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            } >> pr-validation-summary/summary.md
+          }
+
+          {
+            echo "<!-- pr-validation-summary -->"
+            echo "## PR Validation"
+            echo
+            echo "| Check | Result |"
+            echo "| --- | --- |"
+            echo "| CSharpier | ${{ steps.csharpier.outcome }} |"
+            echo "| XamlStyler | ${{ steps.xamlstyler.outcome }} |"
+            echo "| dotnet test | ${{ steps.tests.outcome }} |"
+            echo
+          } > pr-validation-summary/summary.md
+
+          summarize_log "CSharpier" "csharpier.log"
+          summarize_log "XamlStyler" "xamlstyler.log"
+          summarize_log "dotnet test" "dotnet-test.log"
+
+      - name: Upload PR validation summary
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pr-validation-summary
+          path: pr-validation-summary
+
+      - name: Fail when validation checks fail
+        if: ${{ always() && (steps.csharpier.outcome != 'success' || steps.xamlstyler.outcome != 'success' || steps.tests.outcome != 'success') }}
+        shell: bash
+        run: exit 1
 
   prepare:
     if: ${{ inputs.publish_deliverables }}
