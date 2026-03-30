@@ -32,10 +32,6 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet_version }}
 
-      - name: Normalize checkout line endings for validation
-        shell: bash
-        run: git -c core.autocrlf=false -c core.eol=lf checkout-index -f -a
-
       - name: Restore tools
         shell: bash
         run: dotnet tool restore
