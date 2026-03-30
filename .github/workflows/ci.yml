@@ -23,12 +23,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
       - name: Install .NET
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: ${{ inputs.dotnet_version }}
 
@@ -38,52 +38,27 @@ jobs:
 
       - name: Check CSharpier formatting
         id: csharpier
+        continue-on-error: true
         shell: bash
-        run: |
-          set +e
-          dotnet csharpier check . 2>&1 | tee csharpier.log
-          status=${PIPESTATUS[0]}
-          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
-          exit 0
+        run: dotnet csharpier check . 2>&1 | tee csharpier.log
 
       - name: Check XAML formatting
         id: xamlstyler
+        continue-on-error: true
         shell: bash
-        run: |
-          set +e
-          dotnet xstyler -r -d src -p 2>&1 | tee xamlstyler.log
-          status=$?
-          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
-          exit 0
+        run: dotnet xstyler -r -d src -p 2>&1 | tee xamlstyler.log
 
       - name: Run tests
         id: tests
+        continue-on-error: true
         shell: bash
-        run: |
-          set +e
-          dotnet test BrowserPicker.sln -p:Version=1.0.0 2>&1 | tee dotnet-test.log
-          status=${PIPESTATUS[0]}
-          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
-          exit 0
+        run: dotnet test BrowserPicker.sln -p:Version=1.0.0 2>&1 | tee dotnet-test.log
 
       - name: Build PR validation summary
         if: ${{ always() }}
         shell: bash
-        env:
-          CSHARPIER_EXIT_CODE: ${{ steps.csharpier.outputs.exit_code }}
-          XAMLSTYLER_EXIT_CODE: ${{ steps.xamlstyler.outputs.exit_code }}
-          TESTS_EXIT_CODE: ${{ steps.tests.outputs.exit_code }}
         run: |
           mkdir -p pr-validation-summary
-
-          summarize_status() {
-            local code="$1"
-            if [ "$code" = "0" ]; then
-              echo "success"
-            else
-              echo "failure"
-            fi
-          }
 
           summarize_log() {
             local label="$1"
@@ -113,9 +88,9 @@ jobs:
             echo
             echo "| Check | Result |"
             echo "| --- | --- |"
-            echo "| CSharpier | $(summarize_status "${CSHARPIER_EXIT_CODE}") |"
-            echo "| XamlStyler | $(summarize_status "${XAMLSTYLER_EXIT_CODE}") |"
-            echo "| dotnet test | $(summarize_status "${TESTS_EXIT_CODE}") |"
+            echo "| CSharpier | ${{ steps.csharpier.outcome }} |"
+            echo "| XamlStyler | ${{ steps.xamlstyler.outcome }} |"
+            echo "| dotnet test | ${{ steps.tests.outcome }} |"
             echo
           } > pr-validation-summary/summary.md
 
@@ -125,13 +100,13 @@ jobs:
 
       - name: Upload PR validation summary
         if: ${{ always() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: pr-validation-summary
           path: pr-validation-summary
 
       - name: Fail when validation checks fail
-        if: ${{ always() && (steps.csharpier.outputs.exit_code != '0' || steps.xamlstyler.outputs.exit_code != '0' || steps.tests.outputs.exit_code != '0') }}
+        if: ${{ always() && (steps.csharpier.outcome != 'success' || steps.xamlstyler.outcome != 'success' || steps.tests.outcome != 'success') }}
         shell: bash
         run: exit 1
 
@@ -144,7 +119,7 @@ jobs:
       package_version: ${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }}.${{ steps.version.outputs.patch }}.${{ steps.version.outputs.increment }}
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -159,7 +134,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -170,7 +145,7 @@ jobs:
         run: git diff --exit-code -- schemas/browserpicker-settings.schema.json
 
       - name: Upload schema artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: BrowserPicker-settings-schema
           path: schemas/browserpicker-settings.schema.json
@@ -184,12 +159,12 @@ jobs:
         configuration: [Debug, Release]
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
       - name: Install .NET
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: ${{ inputs.dotnet_version }}
 
@@ -210,13 +185,13 @@ jobs:
         run: dotnet build dist/Dependent/Dependent.wixproj --no-dependencies -c ${{ matrix.configuration }} -p Version=${{ needs.prepare.outputs.package_version }}
 
       - name: Upload msi
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: DependentSetup-${{ needs.prepare.outputs.version }}-${{ matrix.configuration }}
           path: dist/Dependent/bin/${{ matrix.configuration }}
 
       - name: Upload bundle
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: Dependent-${{ needs.prepare.outputs.version }}-${{ matrix.configuration }}
           path: src/BrowserPicker.UI/bin/${{ matrix.configuration }}/net10.0-windows/publish
@@ -230,12 +205,12 @@ jobs:
         configuration: [Debug, Release]
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
       - name: Install .NET
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: ${{ inputs.dotnet_version }}
 
@@ -256,13 +231,13 @@ jobs:
         run: dotnet build dist/Portable/Portable.wixproj --no-dependencies -c ${{ matrix.configuration }} -p Version=${{ needs.prepare.outputs.package_version }}
 
       - name: Upload msi
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: PortableSetup-${{ needs.prepare.outputs.version }}-${{ matrix.configuration }}
           path: dist/Portable/bin/${{ matrix.configuration }}
 
       - name: Upload bundle
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: Portable-${{ needs.prepare.outputs.version }}-${{ matrix.configuration }}
           path: src/BrowserPicker.UI/bin/${{ matrix.configuration }}/net10.0-windows/win-x64/publish
