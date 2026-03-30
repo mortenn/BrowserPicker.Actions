@@ -1,0 +1,136 @@
+name: BrowserPicker PR Validation
+
+on:
+  workflow_call:
+    inputs:
+      dotnet_version:
+        description: "The .NET SDK version to install."
+        required: false
+        type: string
+        default: "10.x"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      - name: Restore tools
+        shell: bash
+        run: dotnet tool restore
+
+      - name: Check CSharpier formatting
+        id: csharpier
+        shell: bash
+        run: |
+          set +e
+          dotnet csharpier check . 2>&1 | tee csharpier.log
+          exit_code=${PIPESTATUS[0]}
+          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Check XAML formatting
+        id: xamlstyler
+        shell: bash
+        run: |
+          set +e
+          dotnet xstyler -r -d src -p 2>&1 | tee xamlstyler.log
+          exit_code=${PIPESTATUS[0]}
+          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Run tests
+        id: tests
+        shell: bash
+        run: |
+          set +e
+          dotnet test BrowserPicker.sln -p:Version=1.0.0 2>&1 | tee dotnet-test.log
+          exit_code=${PIPESTATUS[0]}
+          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Build PR validation summary
+        if: ${{ always() }}
+        shell: bash
+        env:
+          CSHARPIER_EXIT_CODE: ${{ steps.csharpier.outputs.exit_code || '1' }}
+          XAMLSTYLER_EXIT_CODE: ${{ steps.xamlstyler.outputs.exit_code || '1' }}
+          TESTS_EXIT_CODE: ${{ steps.tests.outputs.exit_code || '1' }}
+        run: |
+          mkdir -p pr-validation-summary
+
+          format_status() {
+            if [ "$1" = "0" ]; then
+              echo "success"
+            else
+              echo "failure"
+            fi
+          }
+
+          summarize_log() {
+            local label="$1"
+            local file="$2"
+
+            {
+              echo "### ${label}"
+              echo
+              echo "<details><summary>Output</summary>"
+              echo
+              echo '```text'
+              if [ -f "$file" ]; then
+                sed -n '1,120p' "$file"
+              else
+                echo "No output captured."
+              fi
+              echo '```'
+              echo
+              echo "</details>"
+              echo
+            } >> pr-validation-summary/summary.md
+          }
+
+          {
+            echo "<!-- pr-validation-summary -->"
+            echo "## PR Validation"
+            echo
+            echo "| Check | Result |"
+            echo "| --- | --- |"
+            echo "| CSharpier | $(format_status "${CSHARPIER_EXIT_CODE}") |"
+            echo "| XamlStyler | $(format_status "${XAMLSTYLER_EXIT_CODE}") |"
+            echo "| dotnet test | $(format_status "${TESTS_EXIT_CODE}") |"
+            echo
+          } > pr-validation-summary/summary.md
+
+          summarize_log "CSharpier" "csharpier.log"
+          summarize_log "XamlStyler" "xamlstyler.log"
+          summarize_log "dotnet test" "dotnet-test.log"
+
+      - name: Upload PR validation summary
+        if: ${{ always() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: pr-validation-summary
+          path: pr-validation-summary
+
+      - name: Fail when validation checks fail
+        if: ${{ always() }}
+        shell: bash
+        env:
+          CSHARPIER_EXIT_CODE: ${{ steps.csharpier.outputs.exit_code || '1' }}
+          XAMLSTYLER_EXIT_CODE: ${{ steps.xamlstyler.outputs.exit_code || '1' }}
+          TESTS_EXIT_CODE: ${{ steps.tests.outputs.exit_code || '1' }}
+        run: |
+          if [ "${CSHARPIER_EXIT_CODE}" != "0" ] || [ "${XAMLSTYLER_EXIT_CODE}" != "0" ] || [ "${TESTS_EXIT_CODE}" != "0" ]; then
+            exit 1
+          fi
