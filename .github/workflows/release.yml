@@ -1,0 +1,142 @@
+name: BrowserPicker Release
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        uses: paulhatch/semantic-version@a8f8f59fd7f0625188492e945240f12d7ad2dca3 # v5.4.0
+        with:
+          version_format: "${major}.${minor}.${patch}"
+
+  dependent:
+    runs-on: windows-latest
+    needs: prepare
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.x
+
+      - name: Restore tools
+        shell: bash
+        run: dotnet tool restore
+
+      - name: Restore application
+        shell: bash
+        run: dotnet restore BrowserPicker.sln -p VersionPrefix=${{ needs.prepare.outputs.version }}
+
+      - name: Publish application
+        shell: bash
+        run: dotnet publish -c Release src/BrowserPicker.UI/BrowserPicker.UI.csproj -p VersionPrefix=${{ needs.prepare.outputs.version }}
+
+      - name: Create installer
+        shell: bash
+        run: dotnet build dist/Dependent/Dependent.wixproj --no-dependencies -c Release -p Version=${{ needs.prepare.outputs.version }}
+
+      - name: Upload msi
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: DependentSetup-${{ needs.prepare.outputs.version }}-Release
+          path: dist/Dependent/bin/Release
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Dependent-${{ needs.prepare.outputs.version }}-Release
+          path: src/BrowserPicker.UI/bin/Release/net10.0-windows/publish
+
+  portable:
+    runs-on: windows-latest
+    needs: prepare
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.x
+
+      - name: Restore tools
+        shell: bash
+        run: dotnet tool restore
+
+      - name: Restore application
+        shell: bash
+        run: dotnet restore BrowserPicker.sln -p VersionPrefix=${{ needs.prepare.outputs.version }} -r win-x64 -p:PublishSingleFile=true
+
+      - name: Publish application
+        shell: bash
+        run: dotnet publish -c Release src/BrowserPicker.UI/BrowserPicker.UI.csproj -p VersionPrefix=${{ needs.prepare.outputs.version }} -r win-x64 -p:PublishSingleFile=true
+
+      - name: Create installer
+        shell: bash
+        run: dotnet build dist/Portable/Portable.wixproj --no-dependencies -c Release -p Version=${{ needs.prepare.outputs.version }}
+
+      - name: Upload msi
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: PortableSetup-${{ needs.prepare.outputs.version }}-Release
+          path: dist/Portable/bin/Release
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Portable-${{ needs.prepare.outputs.version }}-Release
+          path: src/BrowserPicker.UI/bin/Release/net10.0-windows/win-x64/publish
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [prepare, dependent, portable]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Retrieve artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+
+      - name: Package bundles
+        run: |
+          rm -rf *.zip
+          for bundle in Dependent Portable; do
+            (cd $bundle-${{ needs.prepare.outputs.version }}-Release; zip -r ../$bundle.zip *)
+          done
+
+      - name: Release
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
+        with:
+          generate_release_notes: true
+          draft: true
+          prerelease: true
+          files: |
+            DependentSetup-${{ needs.prepare.outputs.version }}-Release/BrowserPicker.msi
+            PortableSetup-${{ needs.prepare.outputs.version }}-Release/BrowserPicker-Portable.msi
+            schemas/browserpicker-settings.schema.json
+            Dependent.zip
+            Portable.zip
