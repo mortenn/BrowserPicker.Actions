@@ -46,7 +46,7 @@ jobs:
         run: git diff --exit-code -- schemas/browserpicker-settings.schema.json
 
       - name: Upload schema artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: BrowserPicker-settings-schema
           path: schemas/browserpicker-settings.schema.json
@@ -85,13 +85,13 @@ jobs:
         run: dotnet build dist/Dependent/Dependent.wixproj --no-dependencies -c ${{ matrix.configuration }} -p Version=${{ needs.prepare.outputs.package_version }}
 
       - name: Upload msi
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: DependentSetup-${{ needs.prepare.outputs.version }}-${{ matrix.configuration }}
           path: dist/Dependent/bin/${{ matrix.configuration }}
 
       - name: Upload bundle
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Dependent-${{ needs.prepare.outputs.version }}-${{ matrix.configuration }}
           path: src/BrowserPicker.UI/bin/${{ matrix.configuration }}/net10.0-windows/publish
@@ -130,13 +130,13 @@ jobs:
         run: dotnet build dist/Portable/Portable.wixproj --no-dependencies -c ${{ matrix.configuration }} -p Version=${{ needs.prepare.outputs.package_version }}
 
       - name: Upload msi
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: PortableSetup-${{ needs.prepare.outputs.version }}-${{ matrix.configuration }}
           path: dist/Portable/bin/${{ matrix.configuration }}
 
       - name: Upload bundle
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Portable-${{ needs.prepare.outputs.version }}-${{ matrix.configuration }}
           path: src/BrowserPicker.UI/bin/${{ matrix.configuration }}/net10.0-windows/win-x64/publish
