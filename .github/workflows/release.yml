@@ -60,13 +60,13 @@ jobs:
         run: dotnet build dist/Dependent/Dependent.wixproj --no-dependencies -c Release -p Version=${{ needs.prepare.outputs.version }}
 
       - name: Upload msi
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: DependentSetup-${{ needs.prepare.outputs.version }}-Release
           path: dist/Dependent/bin/Release
 
       - name: Upload bundle
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Dependent-${{ needs.prepare.outputs.version }}-Release
           path: src/BrowserPicker.UI/bin/Release/net10.0-windows/publish
@@ -102,13 +102,13 @@ jobs:
         run: dotnet build dist/Portable/Portable.wixproj --no-dependencies -c Release -p Version=${{ needs.prepare.outputs.version }}
 
       - name: Upload msi
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: PortableSetup-${{ needs.prepare.outputs.version }}-Release
           path: dist/Portable/bin/Release
 
       - name: Upload bundle
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Portable-${{ needs.prepare.outputs.version }}-Release
           path: src/BrowserPicker.UI/bin/Release/net10.0-windows/win-x64/publish
