@@ -55,7 +55,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          dotnet test BrowserPicker.sln -p:Version=1.0.0 --logger "trx;LogFileName=dotnet-test.trx" --results-directory test-results 2>&1 | tee dotnet-test.log
+          dotnet test BrowserPicker.sln -p:Version=1.0.0 -- --report-xunit-trx --report-xunit-trx-filename dotnet-test.trx --results-directory test-results 2>&1 | tee dotnet-test.log
           exit_code=${PIPESTATUS[0]}
           echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
           exit 0
